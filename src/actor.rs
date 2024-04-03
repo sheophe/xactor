@@ -4,7 +4,7 @@ use crate::runtime::spawn;
 use crate::{Addr, Context};
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
-use futures::{FutureExt, StreamExt};
+use futures::{Future, FutureExt, StreamExt};
 
 /// Represents a message that can be handled by the actor.
 pub trait Message: 'static + Send {
@@ -16,33 +16,36 @@ pub trait Message: 'static + Send {
 /// Describes how to handle messages of a specific type.
 /// Implementing Handler is a general way to handle incoming messages.
 /// The type T is a message which can be handled by the actor.
-#[async_trait::async_trait]
 pub trait Handler<T: Message>: Actor
 where
-    Self: std::marker::Sized,
+    Self: Sized,
 {
     /// Method is called for every message received by this Actor.
-    async fn handle(&mut self, ctx: &mut Context<Self>, msg: T) -> T::Result;
+    fn handle(&mut self, ctx: &mut Context<Self>, msg: T)
+        -> impl Future<Output = T::Result> + Send;
 }
 
 /// Describes how to handle messages of a specific type.
 /// Implementing Handler is a general way to handle incoming streams.
 /// The type T is a stream message which can be handled by the actor.
 /// Stream messages do not need to implement the `Message` trait.
-#[async_trait::async_trait]
 #[allow(unused_variables)]
 pub trait StreamHandler<T: 'static>: Actor {
     /// Method is called for every message received by this Actor.
-    async fn handle(&mut self, ctx: &mut Context<Self>, msg: T);
+    fn handle(&mut self, ctx: &mut Context<Self>, msg: T) -> impl Future<Output = ()> + Send;
 
     /// Method is called when stream get polled first time.
-    async fn started(&mut self, ctx: &mut Context<Self>) {}
+    fn started(&mut self, ctx: &mut Context<Self>) -> impl Future<Output = ()> + Send {
+        async move {}
+    }
 
     /// Method is called when stream finishes.
     ///
     /// By default this method stops actor execution.
-    async fn finished(&mut self, ctx: &mut Context<Self>) {
-        ctx.stop(None);
+    fn finished(&mut self, ctx: &mut Context<Self>) -> impl Future<Output = ()> + Send {
+        async move {
+            ctx.stop(None);
+        }
     }
 }
 
@@ -55,25 +58,26 @@ pub trait StreamHandler<T: 'static>: Actor {
 /// The requester can wait for a response.
 /// By `Addr` referring to the actors, the actors must provide an `Handle<T>` implementation for this message.
 /// All messages are statically typed.
-#[async_trait::async_trait]
 #[allow(unused_variables)]
 pub trait Actor: Sized + Send + 'static {
     /// Called when the actor is first started.
-    async fn started(&mut self, ctx: &mut Context<Self>) -> Result<()> {
-        Ok(())
+    fn started(&mut self, ctx: &mut Context<Self>) -> impl Future<Output = Result<()>> + Send {
+        async move { Ok(()) }
     }
 
     /// Called after an actor is stopped.
-    async fn stopped(&mut self, ctx: &mut Context<Self>) {}
+    fn stopped(&mut self, ctx: &mut Context<Self>) -> impl Future<Output = ()> + Send {
+        async move {}
+    }
 
     /// Construct and start a new actor, returning its address.
     ///
     /// This is constructs a new actor using the `Default` trait, and invokes its `start` method.
-    async fn start_default() -> Result<Addr<Self>>
+    fn start_default() -> impl Future<Output = Result<Addr<Self>>> + Send
     where
-        Self: Default,
+        Self: Send + Default,
     {
-        Ok(Self::default().start().await?)
+        Self::default().start()
     }
 
     /// Start a new actor, returning its address.
@@ -108,8 +112,8 @@ pub trait Actor: Sized + Send + 'static {
     ///     Ok(())
     /// }
     /// ```
-    async fn start(self) -> Result<Addr<Self>> {
-        ActorManager::new().start_actor(self).await
+    fn start(self) -> impl Future<Output = Result<Addr<Self>>> + Send {
+        ActorManager::new().start_actor(self)
     }
 }
 

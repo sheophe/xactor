@@ -14,7 +14,6 @@ impl Default for PingTimer {
     }
 }
 
-#[async_trait::async_trait]
 impl Actor for PingTimer {
     async fn started(&mut self, ctx: &mut Context<Self>) -> xactor::Result<()> {
         println!("PingTimer:: started()");
@@ -32,7 +31,6 @@ impl Actor for PingTimer {
 #[derive(Clone)]
 struct Ping;
 
-#[async_trait::async_trait]
 impl Handler<Ping> for PingTimer {
     async fn handle(&mut self, ctx: &mut Context<Self>, _msg: Ping) {
         let now = Instant::now();
@@ -44,7 +42,6 @@ impl Handler<Ping> for PingTimer {
 #[message]
 struct Halt;
 
-#[async_trait::async_trait]
 impl Handler<Halt> for PingTimer {
     async fn handle(&mut self, ctx: &mut Context<Self>, _msg: Halt) {
         println!("PingTimer:: received Halt");
@@ -56,7 +53,6 @@ impl Handler<Halt> for PingTimer {
 #[message]
 struct Panic;
 
-#[async_trait::async_trait]
 impl Handler<Panic> for PingTimer {
     async fn handle(&mut self, _: &mut Context<Self>, _msg: Panic) {
         println!("PingTimer:: received Panic");

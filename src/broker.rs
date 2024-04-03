@@ -89,21 +89,18 @@ impl<T: Message<Result = ()>> Actor for Broker<T> {}
 
 impl<T: Message<Result = ()>> Service for Broker<T> {}
 
-#[async_trait::async_trait]
 impl<T: Message<Result = ()>> Handler<Subscribe<T>> for Broker<T> {
     async fn handle(&mut self, _ctx: &mut Context<Self>, msg: Subscribe<T>) {
         self.subscribers.insert(msg.actor_id, msg.sender);
     }
 }
 
-#[async_trait::async_trait]
 impl<T: Message<Result = ()>> Handler<Unsubscribe> for Broker<T> {
     async fn handle(&mut self, _ctx: &mut Context<Self>, msg: Unsubscribe) {
         self.subscribers.remove(&msg.actor_id);
     }
 }
 
-#[async_trait::async_trait]
 impl<T: Message<Result = ()> + Clone> Handler<T> for Broker<T> {
     async fn handle(&mut self, _ctx: &mut Context<Self>, msg: T) {
         // Broadcast to all subscribers and remove any senders that return an error (most likely because reciever dropped because actor already stopped)
