@@ -101,4 +101,4 @@ pub use context::Context;
 pub use runtime::{block_on, sleep, spawn, timeout};
 pub use supervisor::Supervisor;
 pub use svc::{LocalService, Service};
-pub use xactor_derive::{main, message};
+pub use xactor_derive::{main, message, service};
