@@ -46,8 +46,8 @@ use std::hash::BuildHasherDefault;
 ///     Ok(())
 /// }
 /// ```
-pub trait Service: Actor + Default {
-    fn from_registry() -> impl Future<Output = Result<Addr<Self>>> + Send {
+pub trait Service: Actor {
+    fn start_service(self) -> impl Future<Output = Result<Addr<Self>>> + Send {
         async move {
             static REGISTRY: OnceCell<
                 Mutex<HashMap<TypeId, Box<dyn Any + Send>, BuildHasherDefault<FnvHasher>>>,
@@ -63,7 +63,7 @@ pub trait Service: Actor + Default {
                     registry.insert(TypeId::of::<Self>(), Box::new(actor_manager.address()));
                     drop(registry);
 
-                    actor_manager.start_actor(Self::default()).await
+                    actor_manager.start_actor(self).await
                 }
             }
         }
@@ -78,8 +78,8 @@ thread_local! {
 ///
 /// The service is a thread local actor.
 /// You can use `Actor::from_registry` to get the address `Addr<A>` of the service.
-pub trait LocalService: Actor + Default {
-    fn from_registry() -> impl Future<Output = Result<Addr<Self>>> + Send {
+pub trait LocalService: Actor {
+    fn start_service(self) -> impl Future<Output = Result<Addr<Self>>> + Send {
         async move {
             let res = LOCAL_REGISTRY.with(|registry| {
                 registry
@@ -90,7 +90,7 @@ pub trait LocalService: Actor + Default {
             match res {
                 Some(addr) => Ok(addr),
                 None => {
-                    let addr = ActorManager::new().start_actor(Self::default()).await?;
+                    let addr = ActorManager::new().start_actor(self).await?;
                     LOCAL_REGISTRY.with(|registry| {
                         registry
                             .borrow_mut()

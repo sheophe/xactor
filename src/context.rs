@@ -304,7 +304,7 @@ impl<A> Context<A> {
     where
         A: Handler<T>,
     {
-        let broker = Broker::<T>::from_registry().await?;
+        let broker = Broker::<T>::default().start_service().await?;
         let sender = self.address().sender();
         broker
             .send(Subscribe {
@@ -317,7 +317,7 @@ impl<A> Context<A> {
 
     /// Unsubscribe to a message of a specified type.
     pub async fn unsubscribe<T: Message<Result = ()>>(&self) -> Result<()> {
-        let broker = Broker::<T>::from_registry().await?;
+        let broker = Broker::<T>::default().start_service().await?;
         broker.send(Unsubscribe {
             actor_id: self.actor_id,
         })
