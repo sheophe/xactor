@@ -1,6 +1,7 @@
 use crate::actor::ActorManager;
 use crate::error::Result;
 use crate::{Actor, Addr};
+use anyhow::anyhow;
 use fnv::FnvHasher;
 use futures::lock::Mutex;
 use futures::Future;
@@ -9,6 +10,10 @@ use std::any::{Any, TypeId};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
+
+static REGISTRY: OnceCell<
+    Mutex<HashMap<TypeId, Box<dyn Any + Send>, BuildHasherDefault<FnvHasher>>>,
+> = OnceCell::new();
 
 /// Trait define a global service.
 ///
@@ -49,9 +54,6 @@ use std::hash::BuildHasherDefault;
 pub trait Service: Actor {
     fn start_service(self) -> impl Future<Output = Result<Addr<Self>>> + Send {
         async move {
-            static REGISTRY: OnceCell<
-                Mutex<HashMap<TypeId, Box<dyn Any + Send>, BuildHasherDefault<FnvHasher>>>,
-            > = OnceCell::new();
             let registry = REGISTRY.get_or_init(Default::default);
             let mut registry = registry.lock().await;
 
@@ -65,6 +67,18 @@ pub trait Service: Actor {
 
                     actor_manager.start_actor(self).await
                 }
+            }
+        }
+    }
+
+    fn from_registry() -> impl Future<Output = Result<Addr<Self>>> + Send {
+        async move {
+            let registry = REGISTRY.get().ok_or(anyhow!("registry not initialized"))?;
+            let mut registry = registry.lock().await;
+
+            match registry.get_mut(&TypeId::of::<Self>()) {
+                Some(addr) => Ok(addr.downcast_ref::<Addr<Self>>().unwrap().clone()),
+                None => Err(anyhow!("service not found")),
             }
         }
     }
@@ -98,6 +112,21 @@ pub trait LocalService: Actor {
                     });
                     Ok(addr)
                 }
+            }
+        }
+    }
+
+    fn from_registry() -> impl Future<Output = Result<Addr<Self>>> + Send {
+        async move {
+            let res = LOCAL_REGISTRY.with(|registry| {
+                registry
+                    .borrow_mut()
+                    .get_mut(&TypeId::of::<Self>())
+                    .map(|addr| addr.downcast_ref::<Addr<Self>>().unwrap().clone())
+            });
+            match res {
+                Some(addr) => Ok(addr),
+                None => Err(anyhow!("service not found")),
             }
         }
     }
