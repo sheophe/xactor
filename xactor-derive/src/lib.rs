@@ -67,6 +67,25 @@ pub fn service(_args: TokenStream, input: TokenStream) -> TokenStream {
     expanded.into()
 }
 
+/// Implement an xactor actor type.
+///
+/// # Examples
+///
+/// ```ignore
+/// #[actor]
+/// struct TestActor;
+/// ```
+#[proc_macro_attribute]
+pub fn actor(_args: TokenStream, input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let ident = &input.ident;
+    let expanded = quote! {
+        #input
+        impl xactor::Actor for #ident {}
+    };
+    expanded.into()
+}
+
 /// Implement an xactor main function.
 ///
 /// Wait for all actors to exit.
