@@ -68,8 +68,8 @@ mod broker;
 mod caller;
 mod context;
 mod runtime;
+mod service;
 mod supervisor;
-mod svc;
 
 #[cfg(all(feature = "anyhow", feature = "eyre"))]
 compile_error!(
@@ -99,6 +99,6 @@ pub use broker::Broker;
 pub use caller::{Caller, Sender};
 pub use context::Context;
 pub use runtime::{block_on, sleep, spawn, timeout};
+pub use service::{LocalService, Service};
 pub use supervisor::Supervisor;
-pub use svc::{LocalService, Service};
 pub use xactor_derive::{main, message, Actor, Service};
