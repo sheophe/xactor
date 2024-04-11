@@ -53,15 +53,14 @@ pub fn message(args: TokenStream, input: TokenStream) -> TokenStream {
 /// # Examples
 ///
 /// ```ignore
-/// #[service]
+/// #[derive(Service)]
 /// struct TestActor;
 /// ```
-#[proc_macro_attribute]
-pub fn service(_args: TokenStream, input: TokenStream) -> TokenStream {
+#[proc_macro_derive(Service)]
+pub fn service(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let ident = &input.ident;
     let expanded = quote! {
-        #input
         impl xactor::Service for #ident {}
     };
     expanded.into()
@@ -72,15 +71,14 @@ pub fn service(_args: TokenStream, input: TokenStream) -> TokenStream {
 /// # Examples
 ///
 /// ```ignore
-/// #[actor]
+/// #[derive(Actor)]
 /// struct TestActor;
 /// ```
-#[proc_macro_attribute]
-pub fn actor(_args: TokenStream, input: TokenStream) -> TokenStream {
+#[proc_macro_derive(Actor)]
+pub fn actor(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let ident = &input.ident;
     let expanded = quote! {
-        #input
         impl xactor::Actor for #ident {}
     };
     expanded.into()
