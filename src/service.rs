@@ -56,18 +56,11 @@ pub trait Service: Actor {
         async move {
             let registry = REGISTRY.get_or_init(Default::default);
             let mut registry = registry.lock().await;
+            let actor_manager = ActorManager::new();
+            registry.insert(TypeId::of::<Self>(), Box::new(actor_manager.address()));
+            drop(registry);
 
-            match registry.get_mut(&TypeId::of::<Self>()) {
-                Some(addr) => Ok(addr.downcast_ref::<Addr<Self>>().unwrap().clone()),
-                None => {
-                    let actor_manager = ActorManager::new();
-
-                    registry.insert(TypeId::of::<Self>(), Box::new(actor_manager.address()));
-                    drop(registry);
-
-                    actor_manager.start_actor(self).await
-                }
-            }
+            actor_manager.start_actor(self).await
         }
     }
 
